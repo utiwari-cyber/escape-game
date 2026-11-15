@@ -12,32 +12,34 @@
   html,body{margin:0;height:100%;background:#0d0a12;overflow:hidden;touch-action:none;
     -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
   #wrap{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    padding-bottom:150px;box-sizing:border-box}
-  @media (orientation:landscape){#wrap{padding-bottom:0}}
+    padding-bottom:250px;box-sizing:border-box}
   canvas{display:block;width:min(100vw,calc(100dvh * 320 / 192));aspect-ratio:320/192;
     image-rendering:pixelated;image-rendering:crisp-edges;background:#000}
-  #pad{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:flex-end;
-    padding:16px 16px calc(24px + env(safe-area-inset-bottom));pointer-events:none}
-  .grp{display:flex;gap:10px}
-  .grid{display:grid;grid-template-columns:auto auto;gap:10px;justify-items:end}
-  button{pointer-events:auto;width:80px;height:80px;border-radius:22px;border:2px solid #ffffff44;
-    background:#ffffff14;color:#ffffffcc;font:bold 28px ui-monospace,Menlo,monospace;touch-action:none;
-    -webkit-tap-highlight-color:transparent;padding:0}
-  button.on{background:#ffffff44}
-  .sm{width:68px;height:68px;border-radius:50%;font-size:12px;letter-spacing:.5px}
-  #bS{border-color:#9fc4ffaa}
-  #bG{border-color:#ffb86aaa}
-  #bJ{grid-column:1 / span 2;width:146px;height:68px;border-radius:34px;font-size:16px;letter-spacing:1px}
+  #pad{position:fixed;left:0;right:0;bottom:0;height:250px;pointer-events:none;padding-bottom:env(safe-area-inset-bottom)}
+  button{pointer-events:auto;position:absolute;border:2px solid #ffffff55;background:#ffffff1c;color:#ffffffdd;
+    font:bold 15px ui-monospace,Menlo,monospace;letter-spacing:1px;touch-action:none;
+    -webkit-tap-highlight-color:transparent;padding:0;border-radius:50%}
+  button.on{background:#ffffff55;transform:scale(.94)}
+  #bL,#bR{bottom:34px;width:76px;height:76px;border-radius:24px;font-size:30px}
+  #bL{left:10px}#bR{left:94px}
+  #bJ{right:10px;bottom:30px;width:96px;height:96px;font-size:16px;border-color:#ffffffaa}
+  #bS{right:112px;bottom:36px;width:88px;height:88px;border-color:#9fc4ffcc;background:#9fc4ff26}
+  #bG{right:50px;bottom:142px;width:84px;height:84px;border-color:#ffb86acc;background:#ffb86a26}
+  @media (orientation:landscape){
+    #wrap{padding-bottom:0}
+    #pad{height:190px}
+    #bL,#bR{bottom:16px;width:80px;height:80px;font-size:28px}#bL{left:16px}#bR{left:108px}
+    #bJ{right:16px;bottom:14px;width:92px;height:92px}
+    #bS{right:122px;bottom:24px;width:78px;height:78px}
+    #bG{right:46px;bottom:114px;width:68px;height:68px}
+  }
 </style>
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="320" height="192"></canvas></div>
 <div id="pad">
-  <div class="grp"><button id="bL">&#9664;</button><button id="bR">&#9654;</button></div>
-  <div class="grid">
-    <button id="bG" class="sm">GUN</button><button id="bS" class="sm">SWORD</button>
-    <button id="bJ">JUMP</button>
-  </div>
+  <button id="bL">&#9664;</button><button id="bR">&#9654;</button>
+  <button id="bG">GUN</button><button id="bS">SWORD</button><button id="bJ">JUMP</button>
 </div>
 <script>
 (() => {
@@ -47,8 +49,8 @@
 const W = 10, H = 4, TW = 32, TH = 48, CW = W * TW, CH = H * TH;
 const PW = 12, PH = 32;
 const GRAV = 0.4, JUMPV = -7.3, WALK = 1.8, RUNJ = 2.4;
-const STUN_FALL = 80, DEATH_FALL = 130, LOOSE_FRAMES = 30;
-const MAXHP = 5, START_HP = 3, MAXAMMO = 9;
+const STUN_FALL = 96, DEATH_FALL = 165, LOOSE_FRAMES = 30;
+const MAXHP = 7, START_HP = 5, MAXAMMO = 9, BOSS_HP = 0.7;
 
 // ---------- levels ----------
 // # stone  . empty  ^ spikes  L loose floor  P plate  G gate  E exit  T torch
@@ -131,7 +133,7 @@ const LEVELS = [
     rooms: [
       { name: 'Cliff Edge', exits: { r: 1 }, start: [1, 3], map: ['#.........', '#..T...T..', '#..b...m..', '######..##'] },
       { name: 'Rope Bridge', exits: { l: 0, r: 2 }, map: ['..........', '.T......T.', '..m..b..x.', '##LLL.####'] },
-      { name: 'Stepping Stones', exits: { l: 1, r: 3 }, map: ['..........', '.T..b...T.', '.A..g.m...', '##..##.###'] },
+      { name: 'Stepping Stones', exits: { l: 1, r: 3 }, map: ['..........', '.T..b...T.', '.A....m...', '##.###.###'] },
       { name: 'Storm Gate', exits: { l: 2, r: 4 }, map: ['......G.b.', '.T....G..T', '.P....G.H.', '##LLL#####'] },
       { name: 'The Dragon', exits: { l: 3 }, map: ['..........', '.T......T.', '.A.A..B.HE', '##########'] },
     ] },
@@ -141,7 +143,7 @@ const LEVELS = [
       { name: 'Black Gate', exits: { r: 1 }, start: [1, 3], map: ['#.........', '#..T...T..', '#..m...x..', '###vv#####'] },
       { name: 'Hall of Spikes', exits: { l: 0, r: 2 }, map: ['..........', '.T..b...T.', '..g...#x..', '###^^#####'] },
       { name: 'Hall of Fire', exits: { l: 1, r: 3 }, map: ['..........', '.T..b...T.', '.A.x..m...', '##LL##vv##'] },
-      { name: 'Hall of Doom', exits: { l: 2, r: 4 }, map: ['..........', '..T....T..', '.m..g.#x..', '##..######'] },
+      { name: 'Hall of Doom', exits: { l: 2, r: 4 }, map: ['..........', '..T....T..', '.m....#x..', '##..######'] },
       { name: 'The Dark King', exits: { l: 3 }, map: ['..........', '.T......T.', '.A.A.B.AHE', '##########'] },
     ] },
 ];
@@ -154,8 +156,8 @@ const BOSSES = {
   golem:   { name: 'LAVA GOLEM',    w: 38, h: 46, hp: 14, beh: 'charger', charge: 3.0, quake: true },
   duck:    { name: 'SIR QUACKERS',  w: 36, h: 34, hp: 12, beh: 'hopper', summon: 'm', spread: true },
   lich:    { name: 'THE LICH',      w: 28, h: 42, hp: 14, beh: 'floater', volley: 3, dive: 2.4, ghost: true },
-  dragon:  { name: 'STORM DRAGON',  w: 46, h: 34, hp: 16, beh: 'floater', volley: 3, dive: 3.4, rate: 60 },
-  king:    { name: 'THE DARK KING', w: 30, h: 46, hp: 24, beh: 'hopper', summon: 'x', spread: true },
+  dragon:  { name: 'STORM DRAGON',  w: 46, h: 34, hp: 14, beh: 'floater', volley: 2, dive: 3.0, rate: 80 },
+  king:    { name: 'THE DARK KING', w: 30, h: 46, hp: 18, beh: 'hopper', summon: 'x', spread: true },
 };
 
 let saved = 0; try { saved = +localStorage.getItem('escape_lvl') || 0; } catch (_) {}
@@ -223,11 +225,11 @@ function mkEnemy(t, x, y) {
 function mkBoss(type, x, y) {
   const d = BOSSES[type];
   return Object.assign({ type, x, y, floorY: y, vx: 0, vy: 0, face: -1, state: 'wait', t: 0, flash: 0, dead: false, dt: 0,
-    active: false, jumps: 0, last: -1 }, d, { max: d.hp });
+    active: false, jumps: 0, last: -1 }, d, { hp: Math.ceil(d.hp * BOSS_HP), max: Math.ceil(d.hp * BOSS_HP) });
 }
 function newPlayer(x, y, prev) {
   P = { x, y, vx: 0, vy: 0, ground: true, face: 1, anim: 0, stun: 0, dead: false, dt: 0, apex: y,
-    hp: prev ? Math.max(prev.hp, START_HP) : START_HP, ammo: prev ? Math.max(prev.ammo, 4) : 6,
+    hp: prev ? Math.max(prev.hp, START_HP) : START_HP, ammo: prev ? Math.max(prev.ammo, 6) : 9,
     atk: 0, shot: 0, shotCool: 0, inv: 0, swing: 0 };
 }
 function startLevel(i, prev) {
@@ -245,7 +247,7 @@ function respawn() { const prev = P; loadRoom(ck.room); newPlayer(ck.x, ck.y, pr
 function die() { if (!P.dead) { P.dead = true; P.dt = 0; P.vx = 0; P.hp = 0; } }
 function hurt(fromX) {
   if (P.inv > 0 || P.dead) return;
-  P.hp--; P.inv = 75; P.atk = 0;
+  P.hp--; P.inv = 110; if (navigator.vibrate) try { navigator.vibrate(30); } catch (_) {} P.atk = 0;
   puff(P.x, P.y - 16, 8, '#d33');
   if (P.hp <= 0) { die(); return; }
   P.vy = -3.2; P.vx = (P.x < fromX ? -1 : 1) * 1.5; P.ground = false; P.apex = P.y;
@@ -324,7 +326,7 @@ function killEnemy(e, stomp) {
   e.dead = true; e.dt = 0; e.stomped = stomp;
   puff(e.x, e.y - 6, 6, { m: '#8b4a2b', x: '#c9302c', b: '#6a3a8a', g: '#bfe9ff' }[e.type]);
   const r = Math.random();
-  if (r < 0.22) pickups.push({ x: e.x, y: e.y, type: 'A' }); else if (r < 0.32) pickups.push({ x: e.x, y: e.y, type: 'H' });
+  if (r < 0.3) pickups.push({ x: e.x, y: e.y, type: 'A' }); else if (r < 0.48) pickups.push({ x: e.x, y: e.y, type: 'H' });
 }
 
 // ---------- bosses ----------
@@ -359,7 +361,7 @@ function updBoss(b) {
         if (b.snow) { fireAt(b.x, b.y - 30, 2.2, -0.25, true); fireAt(b.x, b.y - 30, 2.2, 0.25, true); }
         if (b.quake) waves(b, 2.2);
       }
-    } else if (b.state === 'stun') { if (b.t > 55) { b.state = 'walk'; b.t = 0; } }
+    } else if (b.state === 'stun') { if (b.t > 85) { b.state = 'walk'; b.t = 0; } }
   } else if (b.beh === 'floater') {
     const hoverY = b.floorY - 52 + Math.sin(tick * 0.05) * 14, rate = b.rate || 80, n = b.volley || 1;
     if (b.state === 'walk') {
@@ -493,7 +495,7 @@ function step() {
   // pickups
   pickups = pickups.filter(p => {
     if (ov(P.x, P.y, PW, PH, p.x, p.y, 12, 12)) {
-      if (p.type === 'A') P.ammo = Math.min(MAXAMMO, P.ammo + 3); else P.hp = Math.min(MAXHP, P.hp + 1);
+      if (p.type === 'A') P.ammo = Math.min(MAXAMMO, P.ammo + 4); else P.hp = Math.min(MAXHP, P.hp + 1);
       puff(p.x, p.y - 6, 6, p.type === 'A' ? '#e8b04a' : '#ff5a6a');
       return false;
     }
